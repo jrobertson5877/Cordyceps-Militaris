@@ -1,0 +1,13 @@
+
+WIN_SPORE.cpp:
+--------------
+Linux:
+i686-w64-mingw32-g++ -std=c++11 win_sp0re.cpp -o WIN_SPORE.exe -s -lws2_32 -Wno-write-strings -fno-exceptions -fmerge-all-constants -static-libstdc++ -static-libgcc
+
+Windows:
+g++ -std=c++11 win_sp0re.cpp -o WIN_SPORE.exe -s -lws2_32 -Wno-write-strings -fno-exceptions -fmerge-all-constants -static-libstdc++ -static-libgcc
+
+
+NIX_SPORE.cpp:
+--------------
+g++ -o NIX_SPORE nix_spore.cpp

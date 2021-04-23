@@ -1,0 +1,233 @@
+The purpose of this document is to record progress and work done towards the Cordyceps Militaris project.
+The README doc is more for descriptions and TODO's, so this will be event based records.
+
+20210105 - Tuesday 14:00
+Not much to say besides I have an essential shell or skeleton of the C2. 
+The CLI is starting to really come along.
+Last major improvement was that of adding Beaconing.
+With this, we have a simple ping relay which returns up ordown depending on the return value of the system ping command.
+The other function of the function then will send a 'beacon' signal to the rat to see if the connection is still valid and active.
+The main issue I see here is the cross contaminating of tunnels and streams, and may require a seperate 'manager/beacon' socket to be created for it as to not mix the comm channels.
+I'll have to read more on how this works. 
+
+Update:
+Decided to use a 'wait' variable in the handler so that way if the user is currently interacting with the shell/client/rat then it will not beacon through the socket.
+Debating on whether to do the same thing with the ping records as well, but that may be useful in recording uptime (over long periods? useful?? :D ).
+
+This may be the init of profiles and the logging associated.
+Have to check how permissions are handed out on linux systems to see if we can just put them in /var/log/ or if we should create our own directory for it.
+
+Profiles:
+I think that the right idea would be to use JSON for basic profile compilation. 
+For example, the JSON would list the IP, Port, OS, currentDir, Modules activated, etc.
+
+Logs:
+Logs would not need to be edited, and therefore can be simple txt files.
+With this, there should be a set of logs for each Profile/RAT that joins, or to make things aggregated and simpler we could simply put all the information in one log, with rotation.
+I don't really see a difference besides a secondary layer of parsing (with the aggregated file). 
+Could make the info easier to find too if it was in it's own seperate directory/location. 
+
+Not 100% sure.
+
+$$$
+
+20210106 - Wednesday 01:53
+So I've decided that profiling and the associated logging will be the next thing to tackle.
+Shouldnt be too terrible, just a bunch of writing to files and ensuring that there isn't any memory being access by multiple threads.
+Lets start by outlining what we want from each of the ideas.
+
+In order to have a valid profile, we need to discern what makes a connection special across multiple instannces and uses of the C2.
+I think these include:
+	- IP Address
+	- Client Port
+	- Current Working Directory
+	- base64 ID (Different for each rat instance when it starts) -  more or less RNG? See below...
+
+(Quick thought) What if on every startip of a RAT is self assigns it's own hexdecimal or base64 id?
+This would ensure that just because the RAT gets disconnected from the C2 the actual information retrieved from the RAT will not be seperate from the earlier instance.
+With this, I think we can also expand on the 'sleep' function, which can put the RAT in a non-active state, while maintaining it's id and information. 
+Maybe we could have the C2 assign this and keep track of them. As in, when a client connects we assign them an ID then create their profile in the 'profiles' dir. 
+Then, as more and more clients connect the Directory grows with IDs.
+
+In contrast this could get out of hand... The idea of using IDs is alright, but how will the RATs know what ID it is? Do they need to know? What if the RAT gets disconnected completely.
+Would it be simpler to have the C2 organize by IP address and just seperate the connections by timestamps and Client ports? Will definitely need to think about this more.
+Also, if that is the road to take (storage by IP address) than something tells me I'm gonna need somewhat of a better storage allocation that a simple txt. 
+I could be wrong though. Simple aggregated logging might just do that trick. 
+
+$$$
+
+20210106 - Wednesday 21:56
+So JSON is totally off the table I think. If anything, a CSV would be a better option for storage of information, or even a txt with line association.
+Reading online it seems like the format is most definitly not meant to be updated often with information, which is what were looking to do (i think).
+With that, logging is the focus and priority for the next week. Going to outline a structure here:
+
+server.log:
+ - STATUS
+ - ERROR
+
+listener.log:
+ - STATUS
+ - INIT-CONNECTION
+ - DISCONNECTION
+ - ERROR
+
+interpreter.log:
+ - STATUS
+ - MODE-INIT
+ - MODE-EXIT
+ - CMD
+  - History...
+ - ERROR
+
+handler.log
+ - STATUS
+ - INIT-CONNECTION
+ - DISCONNECTION
+ - SHELL ENTRY/EXIT
+ - CMDs
+
+beacon.log = for all clients and connections (timeline)
+ - UPTIME (Ping)
+ - BEACON
+ - ERROR
+
+
+
+20210108 - Friday 23:14
+I've made the decision to implement the logger into an object itself.
+This will allow easier management as it's own (writing and reading) thread.
+
+There will simply be three log files: One for all C2 Related errors and messages, and one for all uptime related errors and messages, and one for all server-side connection issues.
+
+The class/object has been created, the next job is to figure out how the hell the logging queues will be implemented. 
+
+20210109 - Saturday 17:00
+I'm torn between implementing the logging functions as threads in the server.py file, or having the logger be it's own object, with it's own logging functions for each of the 3 logs, or have a seperate object for each log itself.
+
+
+
+20210127 - Wednesday 03:15
+Backstreets back y'all, PvJ work had taken over my life for a few weeks and now that the bulk of it is over the development on this bad boy continues.
+So last I remember I was trying to figure out how to implement the logging with the logger object and avoiding race conditions. 
+I want to do this with queues, but how? 
+Initial thought says creating a log() function in the object that retrieves the job from the queue, opens the correct log, writes, closes, and returns success or error.
+This will mean that it has to have it's own thread (check), continually monitor the queue for updates (not yet), and process so a race conditition does not ensue.
+
+With this, I'm a little confused on how to pass information within the queue beings that there are different types of messages. 
+A few ideas pop to mind:
+ - Instead of passing a string to the log() function, pass a tuple that includes the log being written to and the message itself.
+ - Pass a string with the first part (between the first delimeter of choice) being the log type, ie."[server] msg" and have the function parse the first section of the string
+
+I'm thinking that I simply just pass a tuple object as a parameter. So the structure is as follows:
+
+{ LOGTYPE, MSG }    < Part of me feels that this could be expanded based on other information we would want to throw to the function with the log, but I'm not sure right now. 
+
+
+---
+Other than the topic of logging development, we had our first major (and productive) meeting on Monday. Currently the work structure is as follows:
+ - Andrew is working on the DNS transport schema to incorporate it into the C2 as a possible communication mechanism
+ - Dalton is doing the same thing with the HTTP and HTTPs side of things. 
+ - I am currently working on the logging system and the CMD History element, then moving forward unto cleaning up the UI and C2 structure itself. 
+
+I have a good feeling about this semester.
+I think we're going to get a lot done, and produce something that is not only useful to the world and our successors but beautiful in it's own right and makes us proud to have worked on it. 
+
+
+20210127 - Wednesday 14:32
+Started to continue the Logging work today and implement the queues, but then started to realize that python3 has an immense amount of documentation and modules directly for this purpose. 
+So I'm gonna look into using the logger modules and see if that ensure that I don't have to use something completely formulated by myself.
+The threading and shared-information between them is the main issue I'm worried about, but I'm sure that the given python3 modules have handled that quite well.
+
+
+20210202 - Tuesday 15:17
+Logging must be put off until a proper agent for the *Nix side of systems is built. Currently in the process of transforming the Win version to Linux.
+One issue I've come across is the idea of command execution versus the agent itself handling pseudo-commands like in the WinVer. 
+In the Windows agent, a connection is initiated and the C2 then sends instructions or basic-winapi commands to the agent for execution or CMD-shell return. 
+In Linux I'm not sure how much of this is easy to directly replicate. We can possibly try to use different functions in equating the getpid, whoami, pwd, etc. functions to something similar in Linux C code.
+With that, I think we can use the same sort of function structure by just executing commands and capturing output, then sending it back to the user.
+On linux there is less[?] of a disconnect between the shell process and the socket descriptors, so the transfer of information should be easy.
+Hell, the functions may not even be needed and/or we can look for other 'quieter' means of obtains information were looking for.
+Will have to think more about how this plays between batch and interaction modes. 
+
+
+
+20210210 - Wednesday 23:43
+Currently working on converting the Windows agent into the Linux one. The concern now is between the agent processing it's own command structure and executed commands then returning output, or only allowing the user to do so through the bash/shell prompt. 
+Whats more confusing is how the agent will get past the shell-execution stage of interaction and move on to reset the file descriptors. 
+I worry that this may be more complicated than it needs to be, but I guess thats what testing will do to reassure. 
+
+So far, the TODO's before Friday are:
+- Get a working shell execution mode
+- Get a working out of shell agent execution mode working, ie. getpid, whoami, pwd, etc... Don't really care how its done. Good luck.
+- Get a start on logging done,. For the love of god use Pythons logger libraries, as they'll make everything so much easier PLUS THEY HANDLE MULTITHREADING WAY BETTER
+
+TODOs for after Friday and into Q2:
+- Finish logging
+- Get started on Module implmentation and handling
+- Rework the UI
+- Ensure that the HTTP and DNS can fit nicely into the available listeners; specify the functions that each will be capable of
+
+
+20210213 - Saturday 01:37
+Solution found to problems. Forking the processs and handling the bash shell execution within the child works like a charm.
+Basically we just fork, parents waits on child to finish, child runs shell, exit command received and exits process, then returns to parent.
+Parents resets and closes duplicate file descriptors, handling memory cleaning and goes back to main loop. Thank god this was easier than I thought. 
+
+So that can be kicked off the list for now. It works well enough to carry us into our next phase.
+I think I'm gonna ditch logging for now and work on Download and upload functions for each agent.
+'dtrizna' on github has a solid function built into something like what were doing, and seems to handle it with base64 encoding and transfer.
+I think we can implement something similar, if not just importing the built functions directly into the project. 
+
+On the side I've tried to see if anyone is doing something similar to what were doing.
+Besides the occasional C/++/Py3 Rat/Serv combo out there for windows and Linux, it doesnt appear to be too popular.
+The DTRIZNA guy seems to have followed the same 'paranoidninja' tutorial as I did when I first built the first rendition. 
+I think what were doing is special though. Maybe we can do something that gets attention. 
+
+On another note I hope these functions were implementing for each agent (in tcp) are gonna be easy to port over to the other mechanisms.
+I feel it'll take a bit of research and elbow-grease, but definitely possible and well-documented. Good luck you two...
+
+
+20210216 - Tuesday 02:47
+Had our meeting earlier today. We are to present a working prototype for each of the mechanisms by nect meeting (Monday).
+With this, lets set out exactly what that means, or what we'll be presenting:
+
+ - The interface: Display the start of the C2. Make it flashy, present a beautiful ascii art picture of something cool.
+   + Display ascii and opening messages
+   + Issue the help command; show functions from start
+     - Clear
+	 - list-agents
+	 - batch-mode
+	 - kill <id>
+	 - interact <id>
+	 - help
+	 - info <id>
+	 - exit
+   + Present the prompt:
+     - Take command
+	 - Log command to .history
+     - Process command and arguments
+
+
+
+
+
+$$$
+
+20210303 - 01:51
+
+It's been awhile since I've written or updated to this doc.
+To recap over the past couple weeks...
+ - Logging is fully implemented (the class) with a rewrite and manual position to the queue function
+ - Demo was good, O'Leary seemed to be surprised with how much we got done. Cool.
+ - Dalton is coming along with his end of the http_listener + agent. He has a objective implementation for combining his into the C2 structure I have.
+
+This last Monday (1st) we had a meeting to discuss progress, red teaming, and other things. 
+We're going to have a demo the monday immediately after spring break.
+
+With this, we have goals in mind that we need to get done, and standards I want to exceed:
+ - Logging needs to be a complete implementation; All modules need to have their current level of diagnostics conform to it
+ - Some sort of module framework needs to be started/implemented, ideally including a UI and test-case for passing to agent.
+	+ This capitolizes off of a upload/download function, whcih is a prerequisite
+	+ Other implementations involve the Agent executing the code itself through the shell, or in memory directly[?] who knows... Think about it...
+
+

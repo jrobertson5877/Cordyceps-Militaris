@@ -1,0 +1,9 @@
+﻿  implant.cpp
+C:\Users\zathras\Desktop\win_http_sp0re\win_http_sp0re\results.h(13,10): fatal error C1083: Cannot open include file: 'boost/uuid/uuid.hpp': No such file or directory
+  main.cpp
+C:\Users\zathras\Desktop\win_http_sp0re\win_http_sp0re\results.h(13,10): fatal error C1083: Cannot open include file: 'boost/uuid/uuid.hpp': No such file or directory
+  results.cpp
+C:\Users\zathras\Desktop\win_http_sp0re\win_http_sp0re\results.h(13,10): fatal error C1083: Cannot open include file: 'boost/uuid/uuid.hpp': No such file or directory
+  tasks.cpp
+C:\Users\zathras\Desktop\win_http_sp0re\win_http_sp0re\results.h(13,10): fatal error C1083: Cannot open include file: 'boost/uuid/uuid.hpp': No such file or directory
+  Generating Code...
