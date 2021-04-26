@@ -453,13 +453,10 @@ class Interpreter(threading.Thread):
                 elif (single_cmd.casefold().strip(" ") == "clear"):
                     os.system("clear")
                     self.loggers[0].q_log('serv','info','[* Interpreter-Msg] Screen cleared')
-#------------------------------------------------------------------------------------------------------------------------------
-                # What in the flying fuck are you doing here in interpreter! Move this shit to Handler
                 elif (conn.getTT() == "HTTP" and single_cmd.casefold().strip(" ") == "ping"):
                     ret_val = json.loads(conn.execute(f'[{{"task_type":"ping","agent_id":"{str(conn.getID())}"}}]'))
                     res_task_id = [key for key in ret_val.keys() if key != "agent_id" and key != "_id" and key != "result_id"]
                     for id in res_task_id print(ret_val[res_task_id[0]]['contents'])
-#------------------------------------------------------------------------------------------------------------------------------
                 elif (single_cmd.startswith("upload")):
                     try:
                         local_filename = str(single_cmd.split()[1])
